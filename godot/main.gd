@@ -25,7 +25,7 @@ func _ready():
  var grip=cyl("grip",Vector3.ZERO,.18,1.2,mat(Color("#111315"),.05,.45));grip.rotation_degrees.x=65;torch.add_child(grip)
  var cup=cyl("ceramic",Vector3(0,-.58,.28),.13,.38,mat(Color("#c17bd3"),.05,.3));cup.rotation_degrees.x=65;torch.add_child(cup)
  pool=cyl("pool",Vector3(1.0,.87,-1.25),.11,.025,mat(Color("#ff9b28"),.4,.2,Color("#ff6418")));pool.rotation_degrees.z=90;add_child(pool);pool.visible=false
- var cam=Camera3D.new();cam.position=Vector3(0,2.5,4.1);cam.rotation_degrees=Vector3(-18,0,0);add_child(cam)
+ var cam=Camera3D.new();cam.position=Vector3(0,2.5,4.1);cam.rotation_degrees=Vector3(-18,0,0);cam.current=true;add_child(cam)
  var ui=CanvasLayer.new();add_child(ui);hud=Label.new();hud.position=Vector2(24,20);hud.add_theme_font_size_override("font_size",24);hud.text="WELDQUEST  •  WIG TRAINING\n85 A   |   8 l/min   |   Edelstahl 1.4301\nFinger ziehen: Brenner führen  •  gedrückt halten: Lichtbogen";ui.add_child(hud)
 func _process(d):
  var t=Time.get_ticks_msec()/1000.0
