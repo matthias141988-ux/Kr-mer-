@@ -29,6 +29,11 @@ var helmet_overlay: Control
 var visor_tint: ColorRect
 var arc_light: OmniLight3D
 var arc_energy := 0.0
+var torch_hand: Node3D
+var filler_hand: Node3D
+var filler_rod: MeshInstance3D
+var torch_home := Vector3.ZERO
+var filler_home := Vector3.ZERO
 const TOUCH_DEADZONE := 2.5
 const TORCH_SENSITIVITY := 0.0018
 const TORCH_SMOOTHING := 14.0
@@ -51,8 +56,15 @@ func _ready():
  box("plate",Vector3(0,.81,-1.3),Vector3(4.8,.08,2.2),mat(Color("#747d80"),.9,.18))
  for i in range(-5,6): box("wall",Vector3(i*1.2,2.4,-5),Vector3(1.1,4.8,.15),mat(Color("#252a2c"),.2,.7))
  torch=Node3D.new();torch.position=Vector3(1.2,1.8,-.7);add_child(torch)
+ torch_hand=Node3D.new();torch.add_child(torch_hand)
+ var glove=cyl("torch_glove",Vector3(0,.28,.16),.28,.55,mat(Color("#30363a"),.05,.7));glove.rotation_degrees.x=78;remove_child(glove);torch_hand.add_child(glove)
  var grip=cyl("grip",Vector3.ZERO,.18,1.2,mat(Color("#111315"),.05,.45));grip.rotation_degrees.x=65;torch.add_child(grip)
  var cup=cyl("ceramic",Vector3(0,-.58,.28),.13,.38,mat(Color("#c17bd3"),.05,.3));cup.rotation_degrees.x=65;torch.add_child(cup)
+ filler_hand=Node3D.new();filler_hand.position=Vector3(-1.15,1.25,-.65);add_child(filler_hand)
+ var fg=cyl("filler_glove",Vector3.ZERO,.27,.52,mat(Color("#30363a"),.05,.7));fg.rotation_degrees.z=72;remove_child(fg);filler_hand.add_child(fg)
+ filler_rod=CylinderMesh.new();filler_rod.top_radius=.018;filler_rod.bottom_radius=.018;filler_rod.height=1.65;filler_rod.material=mat(Color("#b9c2c5"),.85,.2)
+ var rod=MeshInstance3D.new();rod.mesh=filler_rod;rod.position=Vector3(.58,-.12,-.18);rod.rotation_degrees.z=78;filler_hand.add_child(rod)
+ torch_home=torch.position;filler_home=filler_hand.position
  pool=cyl("pool",Vector3(1.0,.87,-1.25),.11,.025,mat(Color("#ff9b28"),.4,.2,Color("#ff6418")));pool.rotation_degrees.z=90;add_child(pool);pool.visible=false
  var cam=Camera3D.new();cam.position=Vector3(0,2.5,4.1);cam.rotation_degrees=Vector3(-18,0,0);cam.current=true;add_child(cam)
  var ui=CanvasLayer.new();add_child(ui);hud=Label.new();hud.position=Vector2(24,20);hud.add_theme_font_size_override("font_size",24);hud.text="WELDQUEST  •  WIG TRAINING\n85 A   |   8 l/min   |   Edelstahl 1.4301\nFinger ziehen: Brenner führen  •  gedrückt halten: Lichtbogen";ui.add_child(hud)
@@ -96,6 +108,15 @@ func _process(d):
  filler_target=1.0 if filler_touch>=0 else 0.0
  filler_depth=move_toward(filler_depth,filler_target,d*3.2)
  filler_amount=filler_depth
+ # Visible hands are driven by the same live inputs as welding physics.
+ # Torch hand follows combined weave + seam travel; filler hand visibly dips into the pool.
+ if torch_hand:
+  torch_hand.rotation_degrees.z=lerp(torch_hand.rotation_degrees.z,-torch_velocity.x*900.0,clamp(d*12.0,0.0,1.0))
+  torch_hand.rotation_degrees.x=lerp(torch_hand.rotation_degrees.x,torch_velocity.y*520.0,clamp(d*12.0,0.0,1.0))
+ if filler_hand:
+  var target_filler=filler_home+Vector3(filler_depth*.34,-filler_depth*.16,-filler_depth*.38)
+  filler_hand.position=filler_hand.position.lerp(target_filler,clamp(d*14.0,0.0,1.0))
+  filler_hand.rotation_degrees.z=lerp(filler_hand.rotation_degrees.z,-8.0*filler_depth,clamp(d*14.0,0.0,1.0))
  arc_active=welding
  pool.visible=arc_active
  if visor_tint:
