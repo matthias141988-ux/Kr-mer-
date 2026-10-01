@@ -20,6 +20,14 @@ var weave_start_ms := 0
 var travel_speed := 0.0
 var weave_hz := 0.0
 var quality := 100.0
+var torch_target := Vector2.ZERO
+var torch_velocity := Vector2.ZERO
+var filler_depth := 0.0
+var filler_target := 0.0
+var arc_active := false
+const TOUCH_DEADZONE := 2.5
+const TORCH_SENSITIVITY := 0.0018
+const TORCH_SMOOTHING := 14.0
 
 func mat(c:Color,metal:=0.0,rough:=0.5,emit:=Color.BLACK):
  var m=StandardMaterial3D.new();m.albedo_color=c;m.metallic=metal;m.roughness=rough
@@ -45,7 +53,17 @@ func _ready():
 func _process(d):
  var t=Time.get_ticks_msec()/1000.0
  pool.scale=Vector3.ONE*(1.0+sin(t*20.0)*.12);heat=move_toward(heat,1.0 if welding else 0.0,d*2.5)
- filler_amount=move_toward(filler_amount,1.0 if filler_touch>=0 else 0.0,d*5.0)
+ # Human-centered controls: damp hand jitter, preserve deliberate weaving, and make filler progressive.
+ torch_velocity=torch_velocity.lerp(torch_target,clamp(d*TORCH_SMOOTHING,0.0,1.0))
+ torch.position.x=clamp(torch.position.x+torch_velocity.x,-2.1,2.1)
+ torch.position.z=clamp(torch.position.z+torch_velocity.y,-1.6,-.65)
+ torch_target=torch_target.lerp(Vector2.ZERO,clamp(d*18.0,0.0,1.0))
+ pool.position.x=torch.position.x
+ filler_target=1.0 if filler_touch>=0 else 0.0
+ filler_depth=move_toward(filler_depth,filler_target,d*3.2)
+ filler_amount=filler_depth
+ arc_active=welding
+ pool.visible=arc_active
  if welding:
   weld_time+=d
   make_bead()
@@ -53,7 +71,7 @@ func _process(d):
  var elapsed=max((Time.get_ticks_msec()-weave_start_ms)/1000.0,0.01) if weave_start_ms>0 else 1.0
  weave_hz=(weave_reversals*0.5)/elapsed
  quality=clamp(100.0-abs(travel_speed-75.0)*0.22-abs(weave_hz-1.5)*8.0-max(0.0,filler_amount-.85)*15.0,0.0,100.0)
- hud.text="WELDQUEST  •  WIG TRAINING\n85 A   |   8 l/min   |   Edelstahl 1.4301\nBrenner rechts  •  Zusatz links\nTempo %.0f mm/min | Pendeln %.1f Hz | Weg %.1f mm\nZusatz-Tupfer %d | Analyse %.0f%%" % [travel_speed,weave_hz,weave_distance*1000.0,filler_taps,quality]
+ hud.text="WELDQUEST  •  WIG TRAINING\n85 A   |   8 l/min   |   Edelstahl 1.4301\nRECHTS: Brenner führen/pendeln   LINKS: Zusatz dosieren\nTempo %.0f mm/min | Pendeln %.1f Hz | Weg %.1f mm\nZusatz %d%% · Tupfer %d | Analyse %.0f%%" % [travel_speed,weave_hz,weave_distance*1000.0,int(filler_depth*100.0),filler_taps,quality]
 func make_bead():
  var p=Vector3(torch.position.x,.87,-1.25);pool.position=p
  if bead.is_empty() or bead[-1].distance_to(p)>.055:
@@ -69,15 +87,16 @@ func _unhandled_input(ev):
     if not filler_was_down: filler_taps+=1
     filler_was_down=true
   else:
-   if ev.index==torch_touch: torch_touch=-1;welding=false;pool.visible=false
+   if ev.index==torch_touch: torch_touch=-1;welding=false;pool.visible=false;torch_target=Vector2.ZERO;torch_velocity=Vector2.ZERO
    if ev.index==filler_touch: filler_touch=-1;filler_was_down=false
  if ev is InputEventScreenDrag and ev.index==torch_touch:
-  var dx=ev.relative.x*.003
-  torch.position.x=clamp(torch.position.x+dx,-2.1,2.1)
-  torch.position.z=clamp(torch.position.z+ev.relative.y*.002,-1.6,-.65)
-  pool.position.x=torch.position.x
+  var motion=ev.relative
+  if motion.length()<TOUCH_DEADZONE: return
+  var dx=motion.x*TORCH_SENSITIVITY
+  var dz=motion.y*TORCH_SENSITIVITY
+  torch_target=Vector2(dx,dz)
   weave_distance+=abs(dx)
-  travel_distance+=abs(ev.relative.y*.002)
+  travel_distance+=abs(dz)
   var dir=sign(torch.position.x-last_torch_x)
   if dir!=0 and last_weave_dir!=0 and dir!=last_weave_dir: weave_reversals+=1
   if dir!=0:last_weave_dir=dir
