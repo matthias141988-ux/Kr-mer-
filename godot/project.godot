@@ -1,0 +1,13 @@
+[application]
+config/name="WeldQuest 3D"
+run/main_scene="res://Main.tscn"
+[display]
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/stretch/mode="canvas_items"
+[rendering]
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+environment/defaults/default_clear_color=Color(0.008,0.012,0.016,1)
+[input]
+arc={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":32)]}
