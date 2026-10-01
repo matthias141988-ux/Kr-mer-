@@ -17,6 +17,12 @@ const PROFILES := {
   "controls":"Rechts: Brenner führen · Trigger: Lichtbogen/Draht",
   "wire_mode":"continuous", "requires_filler_hand":false, "arc_style":"mig"
  },
+ "E_HAND": {
+  "label":"E-Hand / Elektrode",
+  "controls":"Rechts: Elektrodenhalter führen · Abstand/Winkel aktiv halten",
+  "wire_mode":"consumable_electrode", "requires_filler_hand":false, "arc_style":"smaw",
+  "training":["Zünden","Lichtbogenlänge","Elektrodenwinkel","Fahrgeschwindigkeit","Elektrodenabbrand","Schlacke"]
+ },
  "MAG": {
   "label":"MAG",
   "controls":"Rechts: Brenner führen · Trigger: Lichtbogen/Draht",
