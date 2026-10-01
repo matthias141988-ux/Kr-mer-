@@ -25,6 +25,8 @@ var torch_velocity := Vector2.ZERO
 var filler_depth := 0.0
 var filler_target := 0.0
 var arc_active := false
+var helmet_overlay: Control
+var visor_tint: ColorRect
 const TOUCH_DEADZONE := 2.5
 const TORCH_SENSITIVITY := 0.0018
 const TORCH_SMOOTHING := 14.0
@@ -38,6 +40,7 @@ func box(n:String,pos:Vector3,size:Vector3,m):
 func cyl(n:String,pos:Vector3,r:float,h:float,m):
  var x=MeshInstance3D.new();x.name=n;var b=CylinderMesh.new();b.top_radius=r;b.bottom_radius=r;b.height=h;b.material=m;x.mesh=b;x.position=pos;add_child(x);return x
 func _ready():
+ build_helmet_view()
  var env=WorldEnvironment.new();var e=Environment.new();e.background_mode=Environment.BG_COLOR;e.background_color=Color("#111820");e.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;e.ambient_light_color=Color("#7690a0");e.ambient_light_energy=0.35;e.glow_enabled=true;env.environment=e;add_child(env)
  var sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-55,-25,0);sun.light_energy=1.4;sun.shadow_enabled=true;add_child(sun)
  box("floor",Vector3(0,-.15,0),Vector3(14,.2,12),mat(Color("#171b1d"),.1,.75))
@@ -50,6 +53,22 @@ func _ready():
  pool=cyl("pool",Vector3(1.0,.87,-1.25),.11,.025,mat(Color("#ff9b28"),.4,.2,Color("#ff6418")));pool.rotation_degrees.z=90;add_child(pool);pool.visible=false
  var cam=Camera3D.new();cam.position=Vector3(0,2.5,4.1);cam.rotation_degrees=Vector3(-18,0,0);cam.current=true;add_child(cam)
  var ui=CanvasLayer.new();add_child(ui);hud=Label.new();hud.position=Vector2(24,20);hud.add_theme_font_size_override("font_size",24);hud.text="WELDQUEST  •  WIG TRAINING\n85 A   |   8 l/min   |   Edelstahl 1.4301\nFinger ziehen: Brenner führen  •  gedrückt halten: Lichtbogen";ui.add_child(hud)
+func build_helmet_view():
+ helmet_overlay=Control.new()
+ helmet_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+ helmet_overlay.mouse_filter=Control.MOUSE_FILTER_IGNORE
+ add_child(helmet_overlay)
+ var top=ColorRect.new();top.color=Color(0.015,0.018,0.02,0.92);top.position=Vector2(0,0);top.size=Vector2(1920,115)
+ var bottom=ColorRect.new();bottom.color=Color(0.01,0.012,0.014,0.95);bottom.position=Vector2(0,965);bottom.size=Vector2(1920,115)
+ var left=ColorRect.new();left.color=Color(0.012,0.014,0.016,0.90);left.position=Vector2(0,110);left.size=Vector2(155,860)
+ var right=ColorRect.new();right.color=Color(0.012,0.014,0.016,0.90);right.position=Vector2(1765,110);right.size=Vector2(155,860)
+ helmet_overlay.add_child(top);helmet_overlay.add_child(bottom);helmet_overlay.add_child(left);helmet_overlay.add_child(right)
+ visor_tint=ColorRect.new()
+ visor_tint.color=Color(0.03,0.055,0.045,0.10)
+ visor_tint.position=Vector2(155,115);visor_tint.size=Vector2(1610,850)
+ visor_tint.mouse_filter=Control.MOUSE_FILTER_IGNORE
+ helmet_overlay.add_child(visor_tint)
+
 func _process(d):
  var t=Time.get_ticks_msec()/1000.0
  pool.scale=Vector3.ONE*(1.0+sin(t*20.0)*.12);heat=move_toward(heat,1.0 if welding else 0.0,d*2.5)
@@ -64,6 +83,9 @@ func _process(d):
  filler_amount=filler_depth
  arc_active=welding
  pool.visible=arc_active
+ if visor_tint:
+  # Auto-darkening helmet simulation: visor reacts immediately to the arc.
+  visor_tint.color=Color(0.018,0.032,0.026,0.48) if arc_active else Color(0.03,0.055,0.045,0.10)
  if welding:
   weld_time+=d
   make_bead()
