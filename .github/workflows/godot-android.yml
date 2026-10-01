@@ -1,0 +1,42 @@
+name: Build WeldQuest 3D APK
+on:
+  push:
+    branches: [ weldquest-3d ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.6.1
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.1-stable/Godot_v4.6.1-stable_linux.x86_64.zip
+          unzip -q Godot_v4.6.1-stable_linux.x86_64.zip
+          sudo mv Godot_v4.6.1-stable_linux.x86_64 /usr/local/bin/godot
+      - name: Install export templates
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.1-stable/Godot_v4.6.1-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/4.6.1.stable
+          unzip -q Godot_v4.6.1-stable_export_templates.tpz -d /tmp/templates
+          cp -r /tmp/templates/templates/* ~/.local/share/godot/export_templates/4.6.1.stable/
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Configure Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Generate debug keystore
+        run: |
+          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+      - name: Validate Godot project
+        run: godot --headless --path godot --editor --quit
+      - name: Export Android APK
+        run: |
+          mkdir -p build
+          godot --headless --path godot --export-debug "Android" ../build/WeldQuest-3D.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WeldQuest-3D-APK
+          path: build/WeldQuest-3D.apk
