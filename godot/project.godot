@@ -9,6 +9,7 @@ window/handheld/orientation=4
 [rendering]
 renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="mobile"
+textures/vram_compression/import_etc2_astc=true
 environment/defaults/default_clear_color=Color(0.008,0.012,0.016,1)
 [input]
 arc={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":32)]}
