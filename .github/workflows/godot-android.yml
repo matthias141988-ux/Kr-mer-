@@ -30,7 +30,7 @@ jobs:
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"; fi
           yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.1"
       - name: Generate debug keystore
         run: |
           mkdir -p "$HOME/.android"
@@ -50,6 +50,10 @@ jobs:
       - name: Validate Godot project
         run: godot --headless --verbose --path godot --editor --quit
       - name: Export Android APK
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ env.HOME }}/.android/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           mkdir -p build
           godot --headless --verbose --path godot --export-debug "Android" ../build/WeldQuest-3D.apk
