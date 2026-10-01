@@ -27,6 +27,8 @@ var filler_target := 0.0
 var arc_active := false
 var helmet_overlay: Control
 var visor_tint: ColorRect
+var arc_light: OmniLight3D
+var arc_energy := 0.0
 const TOUCH_DEADZONE := 2.5
 const TORCH_SENSITIVITY := 0.0018
 const TORCH_SMOOTHING := 14.0
@@ -41,6 +43,7 @@ func cyl(n:String,pos:Vector3,r:float,h:float,m):
  var x=MeshInstance3D.new();x.name=n;var b=CylinderMesh.new();b.top_radius=r;b.bottom_radius=r;b.height=h;b.material=m;x.mesh=b;x.position=pos;add_child(x);return x
 func _ready():
  build_helmet_view()
+ build_arc_lighting()
  var env=WorldEnvironment.new();var e=Environment.new();e.background_mode=Environment.BG_COLOR;e.background_color=Color("#111820");e.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;e.ambient_light_color=Color("#7690a0");e.ambient_light_energy=0.35;e.glow_enabled=true;env.environment=e;add_child(env)
  var sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-55,-25,0);sun.light_energy=1.4;sun.shadow_enabled=true;add_child(sun)
  box("floor",Vector3(0,-.15,0),Vector3(14,.2,12),mat(Color("#171b1d"),.1,.75))
@@ -53,6 +56,14 @@ func _ready():
  pool=cyl("pool",Vector3(1.0,.87,-1.25),.11,.025,mat(Color("#ff9b28"),.4,.2,Color("#ff6418")));pool.rotation_degrees.z=90;add_child(pool);pool.visible=false
  var cam=Camera3D.new();cam.position=Vector3(0,2.5,4.1);cam.rotation_degrees=Vector3(-18,0,0);cam.current=true;add_child(cam)
  var ui=CanvasLayer.new();add_child(ui);hud=Label.new();hud.position=Vector2(24,20);hud.add_theme_font_size_override("font_size",24);hud.text="WELDQUEST  •  WIG TRAINING\n85 A   |   8 l/min   |   Edelstahl 1.4301\nFinger ziehen: Brenner führen  •  gedrückt halten: Lichtbogen";ui.add_child(hud)
+func build_arc_lighting():
+ arc_light=OmniLight3D.new()
+ arc_light.light_color=Color(0.72,0.86,1.0)
+ arc_light.light_energy=0.0
+ arc_light.omni_range=4.2
+ arc_light.shadow_enabled=true
+ add_child(arc_light)
+
 func build_helmet_view():
  helmet_overlay=Control.new()
  helmet_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -78,6 +89,10 @@ func _process(d):
  torch.position.z=clamp(torch.position.z+torch_velocity.y,-1.6,-.65)
  torch_target=torch_target.lerp(Vector2.ZERO,clamp(d*18.0,0.0,1.0))
  pool.position.x=torch.position.x
+ if arc_light:
+  arc_light.position=pool.global_position+Vector3(0,0.08,0)
+  arc_energy=lerp(arc_energy,9.0 if arc_active else 0.0,clamp(d*22.0,0.0,1.0))
+  arc_light.light_energy=arc_energy
  filler_target=1.0 if filler_touch>=0 else 0.0
  filler_depth=move_toward(filler_depth,filler_target,d*3.2)
  filler_amount=filler_depth
