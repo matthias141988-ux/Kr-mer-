@@ -8,7 +8,7 @@ var torch_touch := -1
 var filler_touch := -1
 var torch_target := Vector2.ZERO
 var filler_depth := 0.0
-var welding := false
+var welding := false\nvar weave_phase := 0.0\nvar reference_weave_hz := 1.35\nvar reference_weave_width := 0.16\nvar filler_pulse := 0.0
 
 func material(color: Color, metallic := 0.0, roughness := 0.5, emission := Color.BLACK) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -99,7 +99,7 @@ func _ready():
 func _process(delta):
 	torch.position.x = lerp(torch.position.x, torch_target.x, clamp(delta * 8.0, 0.0, 1.0))
 	torch.position.z = lerp(torch.position.z, torch_target.y, clamp(delta * 8.0, 0.0, 1.0))
-	filler_depth = move_toward(filler_depth, 1.0 if filler_touch >= 0 else 0.0, delta * 3.0)
+	weave_phase += delta * TAU * reference_weave_hz\n\tvar weave := sin(weave_phase) * reference_weave_width if welding else 0.0\n\ttorch.rotation_degrees.z = lerp(torch.rotation_degrees.z, weave * 32.0, clamp(delta * 8.0, 0.0, 1.0))\n\tfiller_pulse = (sin(weave_phase - 1.2) * 0.5 + 0.5) if filler_touch >= 0 else 0.0\n\tfiller_depth = move_toward(filler_depth, filler_pulse if filler_touch >= 0 else 0.0, delta * 4.5)
 	filler.position = Vector3(-0.85 + filler_depth * 0.35, 1.15 - filler_depth * 0.12, -0.75 - filler_depth * 0.28)
 	pool.position.x = torch.position.x
 	pool.visible = welding
