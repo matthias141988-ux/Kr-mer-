@@ -35,12 +35,22 @@ jobs:
         run: |
           mkdir -p "$HOME/.android"
           keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+      - name: Configure Godot Android paths
+        run: |
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.6.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          EOF
       - name: Validate Godot project
-        run: godot --headless --path godot --editor --quit
+        run: godot --headless --verbose --path godot --editor --quit
       - name: Export Android APK
         run: |
           mkdir -p build
-          godot --headless --path godot --export-debug "Android" ../build/WeldQuest-3D.apk
+          godot --headless --verbose --path godot --export-debug "Android" ../build/WeldQuest-3D.apk
       - uses: actions/upload-artifact@v4
         with:
           name: WeldQuest-3D-APK
