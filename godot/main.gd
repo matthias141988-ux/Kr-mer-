@@ -12,6 +12,14 @@ var weave_distance := 0.0
 var weave_reversals := 0
 var last_weave_dir := 0
 var last_torch_x := 0.0
+var weld_time := 0.0
+var travel_distance := 0.0
+var filler_taps := 0
+var filler_was_down := false
+var weave_start_ms := 0
+var travel_speed := 0.0
+var weave_hz := 0.0
+var quality := 100.0
 
 func mat(c:Color,metal:=0.0,rough:=0.5,emit:=Color.BLACK):
  var m=StandardMaterial3D.new();m.albedo_color=c;m.metallic=metal;m.roughness=rough
@@ -38,8 +46,14 @@ func _process(d):
  var t=Time.get_ticks_msec()/1000.0
  pool.scale=Vector3.ONE*(1.0+sin(t*20.0)*.12);heat=move_toward(heat,1.0 if welding else 0.0,d*2.5)
  filler_amount=move_toward(filler_amount,1.0 if filler_touch>=0 else 0.0,d*5.0)
- if welding: make_bead()
- hud.text="WELDQUEST  •  WIG TRAINING\n85 A   |   8 l/min   |   Edelstahl 1.4301\nBrenner: rechter Finger  •  Zusatz: linker Finger\nPendeln %.1f mm   |   Richtungswechsel %d   |   Zusatz %d%%" % [weave_distance*1000.0,weave_reversals,int(filler_amount*100.0)]
+ if welding:
+  weld_time+=d
+  make_bead()
+ travel_speed=(travel_distance/max(weld_time,0.01))*60000.0
+ var elapsed=max((Time.get_ticks_msec()-weave_start_ms)/1000.0,0.01) if weave_start_ms>0 else 1.0
+ weave_hz=(weave_reversals*0.5)/elapsed
+ quality=clamp(100.0-abs(travel_speed-75.0)*0.22-abs(weave_hz-1.5)*8.0-max(0.0,filler_amount-.85)*15.0,0.0,100.0)
+ hud.text="WELDQUEST  •  WIG TRAINING\n85 A   |   8 l/min   |   Edelstahl 1.4301\nBrenner rechts  •  Zusatz links\nTempo %.0f mm/min | Pendeln %.1f Hz | Weg %.1f mm\nZusatz-Tupfer %d | Analyse %.0f%%" % [travel_speed,weave_hz,weave_distance*1000.0,filler_taps,quality]
 func make_bead():
  var p=Vector3(torch.position.x,.87,-1.25);pool.position=p
  if bead.is_empty() or bead[-1].distance_to(p)>.055:
@@ -49,17 +63,21 @@ func _unhandled_input(ev):
   if ev.pressed:
    if ev.position.x > get_viewport().get_visible_rect().size.x*0.48 and torch_touch<0:
     torch_touch=ev.index;welding=true;pool.visible=true;last_torch_x=torch.position.x
+    if weave_start_ms==0: weave_start_ms=Time.get_ticks_msec()
    elif filler_touch<0:
     filler_touch=ev.index
+    if not filler_was_down: filler_taps+=1
+    filler_was_down=true
   else:
    if ev.index==torch_touch: torch_touch=-1;welding=false;pool.visible=false
-   if ev.index==filler_touch: filler_touch=-1
+   if ev.index==filler_touch: filler_touch=-1;filler_was_down=false
  if ev is InputEventScreenDrag and ev.index==torch_touch:
   var dx=ev.relative.x*.003
   torch.position.x=clamp(torch.position.x+dx,-2.1,2.1)
   torch.position.z=clamp(torch.position.z+ev.relative.y*.002,-1.6,-.65)
   pool.position.x=torch.position.x
   weave_distance+=abs(dx)
+  travel_distance+=abs(ev.relative.y*.002)
   var dir=sign(torch.position.x-last_torch_x)
   if dir!=0 and last_weave_dir!=0 and dir!=last_weave_dir: weave_reversals+=1
   if dir!=0:last_weave_dir=dir
