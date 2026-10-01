@@ -5,6 +5,13 @@ var bead := []
 var welding=false
 var heat=0.0
 var hud: Label
+var torch_touch := -1
+var filler_touch := -1
+var filler_amount := 0.0
+var weave_distance := 0.0
+var weave_reversals := 0
+var last_weave_dir := 0
+var last_torch_x := 0.0
 
 func mat(c:Color,metal:=0.0,rough:=0.5,emit:=Color.BLACK):
  var m=StandardMaterial3D.new();m.albedo_color=c;m.metallic=metal;m.roughness=rough
@@ -30,14 +37,34 @@ func _ready():
 func _process(d):
  var t=Time.get_ticks_msec()/1000.0
  pool.scale=Vector3.ONE*(1.0+sin(t*20.0)*.12);heat=move_toward(heat,1.0 if welding else 0.0,d*2.5)
+ filler_amount=move_toward(filler_amount,1.0 if filler_touch>=0 else 0.0,d*5.0)
  if welding: make_bead()
+ hud.text="WELDQUEST  •  WIG TRAINING\n85 A   |   8 l/min   |   Edelstahl 1.4301\nBrenner: rechter Finger  •  Zusatz: linker Finger\nPendeln %.1f mm   |   Richtungswechsel %d   |   Zusatz %d%%" % [weave_distance*1000.0,weave_reversals,int(filler_amount*100.0)]
 func make_bead():
  var p=Vector3(torch.position.x,.87,-1.25);pool.position=p
  if bead.is_empty() or bead[-1].distance_to(p)>.055:
   var b=cyl("bead",p,.055,.075,mat(Color("#d9b083"),.8,.22,Color("#8b2b08")));b.rotation_degrees.z=90;bead.append(p)
 func _unhandled_input(ev):
- if ev is InputEventScreenTouch:welding=ev.pressed;pool.visible=welding
- if ev is InputEventScreenDrag:
-  torch.position.x=clamp(torch.position.x+ev.relative.x*.003,-2.1,2.1);torch.position.z=clamp(torch.position.z+ev.relative.y*.002,-1.6,-.65);pool.position.x=torch.position.x
- if ev is InputEventMouseButton and ev.button_index==MOUSE_BUTTON_LEFT:welding=ev.pressed;pool.visible=welding
- if ev is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):torch.position.x=clamp(torch.position.x+ev.relative.x*.003,-2.1,2.1)
+ if ev is InputEventScreenTouch:
+  if ev.pressed:
+   if ev.position.x > get_viewport().get_visible_rect().size.x*0.48 and torch_touch<0:
+    torch_touch=ev.index;welding=true;pool.visible=true;last_torch_x=torch.position.x
+   elif filler_touch<0:
+    filler_touch=ev.index
+  else:
+   if ev.index==torch_touch: torch_touch=-1;welding=false;pool.visible=false
+   if ev.index==filler_touch: filler_touch=-1
+ if ev is InputEventScreenDrag and ev.index==torch_touch:
+  var dx=ev.relative.x*.003
+  torch.position.x=clamp(torch.position.x+dx,-2.1,2.1)
+  torch.position.z=clamp(torch.position.z+ev.relative.y*.002,-1.6,-.65)
+  pool.position.x=torch.position.x
+  weave_distance+=abs(dx)
+  var dir=sign(torch.position.x-last_torch_x)
+  if dir!=0 and last_weave_dir!=0 and dir!=last_weave_dir: weave_reversals+=1
+  if dir!=0:last_weave_dir=dir
+  last_torch_x=torch.position.x
+ if ev is InputEventMouseButton and ev.button_index==MOUSE_BUTTON_LEFT:
+  welding=ev.pressed;pool.visible=welding
+ if ev is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+  torch.position.x=clamp(torch.position.x+ev.relative.x*.003,-2.1,2.1)
